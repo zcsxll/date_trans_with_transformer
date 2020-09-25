@@ -35,6 +35,7 @@ FORMATS = ['short',
 def transform(human_readable, machine_readable, human_vocab, machine_vocab):
     X = list(map(lambda x: human_vocab.get(x, '<unk>'), human_readable))
     Y = list(map(lambda x: machine_vocab.get(x, '<unk>'), machine_readable)) #len(Y) is always 10, because the format is YYYY-MM-DD
+    Y = [machine_vocab['<pad>']] + Y
     # print(human_readable)
     # print(machine_readable)
     # print(X)
@@ -96,7 +97,13 @@ class Dataset(torch.utils.data.Dataset):
             self.machine_vocab.update(tuple(machine_readable))
 
         self.human_vocab = dict(zip(sorted(self.human_vocab) + ['<unk>', '<pad>'], list(range(len(self.human_vocab) + 2))))
-        self.inv_machine_vocab = dict(enumerate(sorted(self.machine_vocab)))
+        '''
+        使用transformer时，需要给target序列也传给decoder，但是需要加mask，因为解码第4个输出时，只能使用前面0123这四个特征；后文有详解
+        由于加mask后要进行softmax，因此至少得有一个有效元素
+        但是解码第一个元素时，我们可供使用的target序列长度是0
+        因此必须在最前边加一个<pad>
+        '''
+        self.inv_machine_vocab = dict(enumerate(sorted(self.machine_vocab) + ['<pad>']))
         self.machine_vocab = {v:k for k, v in self.inv_machine_vocab.items()}
         # print(self.human_vocab)
         # print(self.machine_vocab)
@@ -135,6 +142,7 @@ if __name__ == '__main__':
 
     for step, (batch_x, batch_y, extra) in enumerate(dataloader):
         print(step, batch_x.shape, batch_y.shape)
-        print(batch_x[0], extra[0]['human_readable'])
+        # print(batch_x[0], extra[0]['human_readable'])
+        print(batch_y[0], extra[0]['machine_readable']) #extra中的machine_readable部分长度是10，onehot向量是11个，其中第0个对应的是<pad>
         if step >= 0:
             break
