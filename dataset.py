@@ -35,7 +35,13 @@ FORMATS = ['short',
 def transform(human_readable, machine_readable, human_vocab, machine_vocab):
     X = list(map(lambda x: human_vocab.get(x, '<unk>'), human_readable))
     Y = list(map(lambda x: machine_vocab.get(x, '<unk>'), machine_readable)) #len(Y) is always 10, because the format is YYYY-MM-DD
-    Y = [machine_vocab['<pad>']] + Y
+    '''
+    我们输入当网络中的是[machine_vocab['<pad>']] + Y
+    我们输出的目标是Y + [machine_vocab['<pad>']]
+    因为第一次解码只使用了的最开始的<pad>（由mask控制），此时解码出来的字符应该是Y[0]
+    最后一次解码时，使用了全部[machine_vocab['<pad>']] + Y，则目标输出就是Y + [machine_vocab['<pad>']]
+    '''
+    Y = [machine_vocab['<pad>']] + Y + [machine_vocab['<pad>']]
     # print(human_readable)
     # print(machine_readable)
     # print(X)

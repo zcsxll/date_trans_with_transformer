@@ -6,9 +6,23 @@ from dataset import Dataset, transform
 from model import Transformer
 from util import save_load as sl
 
+def translate(model, x, y0):
+    x_tensor = torch.from_numpy(x).unsqueeze(0) #(1, T, 37)， 37是输入数据词汇表长度
+    enc_output = model.encoder(x_tensor)
+    y0_tensor = torch.from_numpy(y0).unsqueeze(0).unsqueeze(0) #(1, 1, 12)， 12是输出数据词汇表长度
+    y_tensor = y0_tensor.clone()
+    
+    for step in range(1, 15):
+        dec_output = model.decoder(enc_output, y_tensor)
+        pred = model.linear(dec_output)
+        pred = torch.nn.Softmax(dim=-1)(pred)
+        y_tensor = torch.cat((y0_tensor, pred), dim=1)
+        print(y_tensor.shape)
+    return y_tensor.squeeze(0)
+
 def main():
     dataset = Dataset(transform=transform, n_datas=10000, seed=None) #生成10000个数据，确保字符都出现
-    model = Transformer(n_head=4)
+    model = Transformer(n_head=2)
     try:
         trained_epoch = sl.find_last_checkpoint('./checkpoint')
         print('load model %d' % (trained_epoch))
@@ -18,9 +32,10 @@ def main():
     model = sl.load_model('./checkpoint', -1, model)
     model.eval()
 
-    x, y, extra = dataset.__getitem__(0)
+    x, y, extra = dataset.__getitem__(0) #值使用y的第0个特征向量，即<pad>对应的onehot向量
     # print(x.shape, y.shape)
-    pred = model(torch.from_numpy(x).unsqueeze(0), torch.from_numpy(y).unsqueeze(0)).squeeze()
+    # pred = model(torch.from_numpy(x).unsqueeze(0), torch.from_numpy(y).unsqueeze(0)).squeeze()
+    pred = translate(model, x, y[0])
     # print(pred.shape)
     # print(pred)
     pred = np.argmax(pred.detach().numpy(), axis=1)[1:]

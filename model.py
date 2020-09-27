@@ -1,4 +1,30 @@
 import torch
+import numpy as np
+
+class PositionalEncoding(torch.nn.Module):
+    def __init__(self, in_dim, out_dim, n_position=50):
+        super(PositionalEncoding, self).__init__()
+
+        self.linear = torch.nn.Linear(in_features=in_dim, out_features=out_dim) #简单代替word embedding
+        # Not a parameter
+        self.register_buffer('pos_table', self._get_sinusoid_encoding_table(n_position, out_dim))
+
+    def _get_sinusoid_encoding_table(self, n_position, out_dim):
+        ''' Sinusoid position encoding table '''
+        # TODO: make it with torch instead of numpy
+
+        def get_position_angle_vec(position):
+            return [position / np.power(10000, 2 * (hid_j // 2) / out_dim) for hid_j in range(out_dim)]
+
+        sinusoid_table = np.array([get_position_angle_vec(pos_i) for pos_i in range(n_position)])
+        sinusoid_table[:, 0::2] = np.sin(sinusoid_table[:, 0::2])  # dim 2i
+        sinusoid_table[:, 1::2] = np.cos(sinusoid_table[:, 1::2])  # dim 2i+1
+
+        return torch.FloatTensor(sinusoid_table).unsqueeze(0)
+
+    def forward(self, x):
+        x = self.linear(x)
+        return x + self.pos_table[:, :x.size(1)].clone().detach()
 
 class ScaledDotProductAttention(torch.nn.Module):
     '''
@@ -113,7 +139,7 @@ class Encoder(torch.nn.Module):
     def __init__(self, n_head, in_dim, out_dim):
         super(Encoder, self).__init__()
 
-        self.position_enc = torch.nn.Linear(in_features=in_dim, out_features=out_dim) #这里目前和论文不一致
+        self.position_enc = PositionalEncoding(in_dim, out_dim)
 
         self.multi_head_attention_1 = MultiHeadAttention(n_head=n_head, in_dim=out_dim, out_dim=out_dim)
         self.layer_norm_1_1 = torch.nn.LayerNorm(out_dim)
@@ -151,7 +177,7 @@ class Decoder(torch.nn.Module):
     def __init__(self, n_head, in_dim, out_dim):
         super(Decoder, self).__init__()
 
-        self.position_enc = torch.nn.Linear(in_features=in_dim, out_features=out_dim) #这里目前和论文不一致
+        self.position_enc = PositionalEncoding(in_dim, out_dim)
 
         self.multi_head_attention_1_1 = MultiHeadAttention(n_head=n_head, in_dim=out_dim, out_dim=out_dim)
         self.layer_norm_1_1 = torch.nn.LayerNorm(out_dim)

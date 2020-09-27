@@ -129,4 +129,4 @@ dmypy.json
 .pyre/
 
 checkpoint/*
-!checkpoint/ckpt_epoch_00.pth
+!checkpoint/ckpt_epoch_19.pth

@@ -26,10 +26,10 @@ def train(model, loss_fn, optimizer, dataloader, epoch, use_gpu=False):
         if use_gpu:
             batch_x = batch_x.cuda()
             batch_y = batch_y.cuda()
-        pred = model(batch_x, batch_y)
-        accuracy = calc_accuracy(pred.detach().cpu().numpy(), batch_y.detach().cpu().numpy())
+        pred = model(batch_x, batch_y[:, :-1, :])
+        accuracy = calc_accuracy(pred.detach().cpu().numpy(), batch_y[:, 1:, :].detach().cpu().numpy())
         # loss = loss_fn(pred.transpose(1, 2), batch_y)
-        loss = loss_fn(pred, batch_y)
+        loss = loss_fn(pred, batch_y[:, 1:, :])
 
         optimizer.zero_grad()
         loss.backward()
@@ -51,7 +51,7 @@ def main(gpu_id=None):
                                             num_workers=6,
                                             collate_fn=partial(collate_fn, pad_vec))
 
-    model = Transformer(n_head=4)
+    model = Transformer(n_head=2)
     if gpu_id is not None:
         print('use gpu')
         os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
@@ -73,7 +73,7 @@ def main(gpu_id=None):
     except Exception as e:
         print('train from the very begining, {}'.format(e))
         trained_epoch = -1
-    for epoch in range(trained_epoch+1, 10):
+    for epoch in range(trained_epoch+1, 20):
         train(model, loss_fn, optimizer, dataloader, epoch, use_gpu=True if gpu_id is not None else False)
 
 if __name__ == '__main__':
