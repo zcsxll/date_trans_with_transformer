@@ -78,6 +78,6 @@ def main(gpu_id=None):
 
 if __name__ == '__main__':
     if len(sys.argv) == 1:
-        main(gpu_id='0')
-    else:
         main(gpu_id=None)
+    else:
+        main(gpu_id='0')
