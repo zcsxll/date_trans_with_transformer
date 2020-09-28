@@ -5,3 +5,8 @@ a pytorch implementation of machine translation model(transformer) that translat
 - Python3 train.py (train with cpu)
 - Python3 train.py cuda (train with gpu)
 - Python3 test.py (test the model)
+ 
+ # attention in decoder(the 2nd multi-head attention)
+ <p align="left">
+<img src="https://github.com/zcsxll/date_trans_with_transformer/blob/master/attention.png" width="600">
+</p>
