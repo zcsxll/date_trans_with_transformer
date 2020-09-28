@@ -147,8 +147,10 @@ class Encoder(torch.nn.Module):
         self.position_wise_feed_forward_1 = PositionWiseFeedForward(out_dim, hidden_dim=128)
         self.layer_norm_1_2 = torch.nn.LayerNorm(out_dim)
 
+        self.scores_for_paint = None
+
     def forward(self, x):
-        qkv = self.position_enc(x) #在encoder中qkv三个tensor是一样的
+        qkv = self.position_enc(x) #(N, T, 37) --> (N, T, 64) 在encoder中qkv三个tensor是一样的
 
         '''
         一下6行有效代码就是一个完整的encoder。
@@ -156,6 +158,7 @@ class Encoder(torch.nn.Module):
         '''
         residual = qkv #根据论文，残差连接的是q。在encoder中，qkv是相同的；在decoder中，出现了k和v相同，但是和q不同的情形
         outputs, scores = self.multi_head_attention_1(qkv, qkv, qkv) #返回的scores用于可视化
+        self.scores_for_paint = scores.detach().cpu().numpy() #用于绘制
         outputs = self.layer_norm_1_1(outputs + residual) #轮文中的Add & Norm
         # print(outputs.shape)
 
@@ -188,6 +191,8 @@ class Decoder(torch.nn.Module):
         self.position_wise_feed_forward_1 = PositionWiseFeedForward(out_dim, hidden_dim=128)
         self.layer_norm_1_3 = torch.nn.LayerNorm(out_dim)
 
+        self.scores_for_paint = None
+
     def forward(self, enc_outputs, target):
         qkv = self.position_enc(target) #在encoder中qkv三个tensor是一样的
 
@@ -198,6 +203,7 @@ class Decoder(torch.nn.Module):
 
         residual = outputs
         outputs, scores = self.multi_head_attention_1_2(outputs, enc_outputs, enc_outputs)
+        self.scores_for_paint = scores.detach().cpu().numpy() #解码时每次会多次赋值，用最后的
         outputs = self.layer_norm_1_2(outputs + residual)
 
         residual = outputs

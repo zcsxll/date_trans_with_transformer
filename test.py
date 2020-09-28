@@ -21,6 +21,30 @@ def translate(model, x, y0): #这里只支持batch_size=1
         # print(y_tensor.shape)
     return y_tensor.squeeze(0) #去除batch size
 
+def paint_score(score, human_readable, pred):
+    '''
+    score: (n_head, T_dec, T_enc)
+    human_readabe: string, length is T_enc
+    pred: string, length is T_dec
+    '''
+    # print(score.shape, len(pred), len(human_readable))
+    # print(pred, human_readable)
+
+    n_head = score.shape[0]
+
+    f = plt.figure(figsize=(8, 8.5))
+    for i in range(n_head):
+        ax = f.add_subplot(n_head, 1, i+1)
+        i = ax.imshow(score[i, :10, :], interpolation='nearest', cmap='Blues')
+
+        ax.set_xticks(range(30))
+        ax.set_xticklabels(human_readable[:30], rotation=0)
+
+        ax.set_yticks(range(10))
+        ax.set_yticklabels(pred[:10], rotation=0)
+
+    plt.savefig('./attention.png')
+
 def main():
     dataset = Dataset(transform=transform, n_datas=10000, seed=None) #生成10000个数据，确保字符都出现
     model = Transformer(n_head=2)
@@ -40,11 +64,16 @@ def main():
     # print(pred.shape)
     pred = np.argmax(pred.detach().numpy(), axis=1)[1:]
     # print(extra['machine_readable'])
-    pred = ''.join([dataset.inv_machine_vocab[p] for p in pred])
+    pred = [dataset.inv_machine_vocab[p] for p in pred]
+    pred_str = ''.join(pred)
     human_readable = extra['human_readable']
     machine_readable = extra['machine_readable']
-    print('%s --> %s, answer: %s' % (human_readable, pred, machine_readable))
-    
+    print('[%s] --> [%s], answer: [%s]' % (human_readable, pred_str, list(machine_readable)))
+
+    dec_scores = model.decoder.scores_for_paint
+    # print(dec_scores.shape)
+    paint_score(dec_scores[0], human_readable, pred)#[0]是去batch中的第0个
+
     # print(len(model.scores_for_paint), model.scores_for_paint[0].shape)
     # scores = np.array(model.scores_for_paint)
     # print(np.argmax(scores, axis=1))
